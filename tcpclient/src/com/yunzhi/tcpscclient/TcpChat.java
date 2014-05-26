@@ -69,7 +69,7 @@ public class TcpChat extends Activity {
     // Array adapter for the conversation thread
     private ArrayAdapter<String> mConversationArrayAdapter;
     // String buffer for outgoing messages
-    private StringBuffer mOutStringBuffer;
+    
     // Local Bluetooth adapter
     // Member object for the chat services
     private TcpChatService mTcpService = null;
@@ -83,9 +83,9 @@ public class TcpChat extends Activity {
         // Set up the window layout
         setContentView(R.layout.main);
         sendForamtSelect = TEXT_FORMAT;
-        sendForamtSelect = TEXT_FORMAT;
+        recvForamtSelect = TEXT_FORMAT;
         //Log.v("hex to byte "+ Integer.valueOf(0x5a),"hex to byte " );
-        //setupChat();
+        setupChat();
     }
 
     @Override
@@ -123,9 +123,7 @@ public class TcpChat extends Activity {
 
         // Initialize the BluetoothChatService to perform bluetooth connections
         mTcpService = new TcpChatService(this, mHandler);
-
-        // Initialize the buffer for outgoing messages
-        mOutStringBuffer = new StringBuffer("");
+        mTcpService.start();
     }
     
     @Override
@@ -203,16 +201,24 @@ public class TcpChat extends Activity {
         				Toast.makeText(this, "please input right format data, like 0x1e 0x2e 0x45 ... or 0x2e,0x2e,0x45", Toast.LENGTH_SHORT).show();
         			}
         			if(!temp.contains("0x"))
-        				sendBuf[i] = Integer.valueOf("0x"+temp).byteValue();
-        			mTcpService.write(sendBuf,strArray.length);
+        				sendBuf[i+4] = Integer.valueOf("0x"+temp).byteValue();
+        			
+        			intToBigEndianArray(sendBuf,strArray.length,0,4);
+        			mTcpService.write(sendBuf,strArray.length+4);
+        			Log.v("send data is "+printHexOutput(sendBuf,strArray.length+4),"send data");
         		}
+        		
+        		
         	}
         	else
         	{
-        		 byte[] send = null;
+        		  
 				try {
-					send = message.getBytes("UTF-8");
-					mTcpService.write(send,send.length);
+					byte[] send = message.getBytes("UTF-8");
+					intToBigEndianArray(sendBuf,send.length,0,4);
+					System.arraycopy(send, 0, sendBuf, 4, send.length);
+					mTcpService.write(sendBuf,send.length+4);
+					Log.v("send data is "+printHexOutput(sendBuf,send.length+4),"send data");
 				} catch (UnsupportedEncodingException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -220,10 +226,8 @@ public class TcpChat extends Activity {
         		 
                  
         	}
-        	
-            // Reset out string buffer to zero and clear the edit text field
-            mOutStringBuffer.setLength(0);
-            mOutEditText.setText(mOutStringBuffer);
+        
+            mOutEditText.setText("");
         }
     }
 
@@ -304,14 +308,14 @@ public class TcpChat extends Activity {
                 	String s = "";
                 	for(int i = 0;i< msg.arg1;i++)
                 		s = s+" "+Integer.toHexString(readBuf[i]);
-                	mConversationArrayAdapter.add("Me:  " + s);
+                	mConversationArrayAdapter.add(mConnectedRemoteName+":  " + s);
                 }
                 else
                 {
                 	String s;
 					try {
 						s = new String(readBuf,"UTF-8");
-						mConversationArrayAdapter.add("Me:  " + s);
+						mConversationArrayAdapter.add(mConnectedRemoteName+":  " + s);
 					} catch (UnsupportedEncodingException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
@@ -374,11 +378,12 @@ public class TcpChat extends Activity {
     					new String[] { "Hex Format", "Text Format" }, sendForamtSelect,
     					new DialogInterface.OnClickListener() {
     						public void onClick(DialogInterface dialog, int which) {
+    							Log.v("radio box select is "+ which,"radio box select is "+ which);
     							if (which == 0) {
     								sendForamtSelect = HEX_FORMAT;
-    			                     //DisplayToast("正确答案："+mRadioButton_2.getText()+"，恭喜你，回答正确");
+    			                     
     			                 } else if(which == 1){
-    			                     //DisplayToast("回答错误！");
+    			                     
     			                	 sendForamtSelect = TEXT_FORMAT;
     			                 }
     							dialog.dismiss();
@@ -404,4 +409,30 @@ public class TcpChat extends Activity {
     							}
     						}).show();
     }
+    
+	public static long bigEndianArrayToInt(byte[] val, int offset, int size) 
+	{
+		long rtn = 0;
+		for (int i = 0; i < size; i++)
+		{ 
+			rtn = (rtn << Byte.SIZE) | ((long) val[offset + i] & 0xff); 
+		} 
+		return rtn;
+	}
+	
+	public static int intToBigEndianArray(byte[] dst, long val, int offset, int size) 
+	{ 
+		for (int i = 0; i < size; i++) 
+		{ 
+			dst[offset++] = (byte) (val >> ((size - i - 1) * Byte.SIZE));
+		} 
+		return offset; 
+	}
+	public static String printHexOutput(byte[] a,int size)
+	{
+		String s = "";
+		for(int i = 0;i<size;i++)
+			s = s+" "+Integer.toHexString(a[i]);
+		return s;
+	}
 }

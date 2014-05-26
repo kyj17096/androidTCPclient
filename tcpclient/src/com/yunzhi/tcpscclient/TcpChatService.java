@@ -22,6 +22,8 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketException;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.UUID;
 
 import android.bluetooth.BluetoothAdapter;
@@ -49,6 +51,8 @@ public class TcpChatService {
     // Debugging
     private static final String TAG = "TcpChatService";
     private static final boolean D = true;
+    
+    private static final int MAX_DADA_PAYLOAD = 1024;
 
     private String remoteIp = "115.28.41.142";
 	private int SERVER_PORT = 8000;
@@ -60,11 +64,14 @@ public class TcpChatService {
     private TcpRecvThread mRecvThread;
     private int mState;
     private Context ctx;
+    private Timer mTimer;
+    private KeepliveTimerTask mTimerTask;
     // Constants that indicate the current connection state
     public static final int STATE_NONE = 0;       // we're doing nothing
     public static final int STATE_LISTEN = 1;     // now listening for incoming connections
     public static final int STATE_CONNECTING = 2; // now initiating an outgoing connection
     public static final int STATE_CONNECTED = 3;  // now connected to a remote device
+    private final int KEEP_LIVE_INTERVAL = 1000*60*15;
 
     /**
      * Constructor. Prepares a new BluetoothChat session.
@@ -117,6 +124,7 @@ public class TcpChatService {
         mconnectToRemoteThread.start();
         setState(STATE_CONNECTING);
         mHandler.obtainMessage(TcpChat.MESSAGE_STATE_CHANGE,STATE_CONNECTING,-1).sendToTarget();
+      
     }
 
 
@@ -157,7 +165,10 @@ public class TcpChatService {
             if (mState != STATE_CONNECTED) return;
         }
         // Perform the write unsynchronized
-              
+        if(mSendThread == null)Log.v("send thread mSendThread == null","send thread mSendThread == null");
+        if(mSendThread.sendHandler == null)Log.v("send thread mSendThread.sendHandler == null ","send thread mSendThread.sendHandler == null");
+        if(out == null)Log.v("send thread out == null","send thread out == null");
+        
         mSendThread.sendHandler.obtainMessage(SEND_DATA_VIA_TCP, size, -1,out).sendToTarget();
     }
 
@@ -166,9 +177,10 @@ public class TcpChatService {
      */
     private void connectionFailed() {
         // Send a failure message back to the Activity
-    	messageForToast("Unable to connect device");
+    	messageForToast("Unable to connect remote server");
         // Start the service over to restart listening mode
         //TcpChatService.this.start();
+    	mHandler.obtainMessage(TcpChat.MESSAGE_STATE_CHANGE,STATE_NONE,-1).sendToTarget();
     }
 
     /**
@@ -178,6 +190,7 @@ public class TcpChatService {
         // Send a failure message back to the Activity
  
     	messageForToast("Device connection was lost");
+    	mHandler.obtainMessage(TcpChat.MESSAGE_STATE_CHANGE,STATE_NONE,-1).sendToTarget();
         // Start the service over to restart listening mode
        // TcpChatService.this.start();
     }
@@ -220,7 +233,8 @@ public class TcpChatService {
     			e.printStackTrace();
     			connectionFailed();
     			try {
-					socket.close();					
+    				if(socket !=null)
+    					socket.close();					
 				} catch (IOException e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
@@ -238,12 +252,19 @@ public class TcpChatService {
             setState(STATE_CONNECTED);          
             
             mRecvThread = new TcpRecvThread(socket);
+            mRecvThread.start();
             mSendThread = new TcpSendThread(socket); 
+            mSendThread.start();
+            initKeepLiveTimer(KEEP_LIVE_INTERVAL);
         }
 
         public void cancel() {
             try {
-            	socket.close();
+            	if(socket !=null)
+            	{
+            		socket.close();
+            		socket = null;
+            	}
             } catch (IOException e) {
                 Log.e(TAG, "close() of connect socket failed", e);
             }
@@ -265,7 +286,8 @@ public class TcpChatService {
         public TcpRecvThread(Socket sk) {
             Log.d(TAG, "create ConnectedThread: ");
             clntSock = sk;
-
+            totalBytesRcvd = 0;
+            buffer = new byte[MAX_DADA_PAYLOAD];
             // Get the BluetoothSocket input and output streams
             try {
             	in = clntSock.getInputStream(); 
@@ -278,28 +300,35 @@ public class TcpChatService {
 
         public void run() {
             Log.i(TAG, "BEGIN mRecvThread");
-            byte[] buffer = new byte[1024];
-            int bytes;
-
-            
+           
+          
             while(true)
     		{
+            	
 	    		try {	    			    	    	
-	    	    	if ((bytesRcvd = in.read(buffer, 0, 1)) == -1) 
+	    	    	if ((bytesRcvd = in.read(buffer, 0, 4)) == -1) 
 	    			{
+	    	    		messageForToast("Connection closed prematurely");
 	    				throw new SocketException("Connection closed prematurely"); 
+	    				
 	    			}
+	    	    	Log.v("receive length byte is "+TcpChat.printHexOutput(buffer,4),"recv data");
+	    	    	length = (int) TcpChat.bigEndianArrayToInt(buffer,0,4);
 	    	    	
-	    	    	//length = (int) decodeIntBigEndian(buffer,0,4);
 		    		while (totalBytesRcvd < length)
 		    		{ 
 		    			if ((bytesRcvd = in.read(buffer, totalBytesRcvd, length - totalBytesRcvd)) == -1) 
 		    			{
+		    				messageForToast("Connection closed prematurely");
 		    				throw new SocketException("Connection closed prematurely"); 
 		    			}
 		    			totalBytesRcvd += bytesRcvd; 
-		    		    mHandler.obtainMessage(TcpChat.MESSAGE_READ, totalBytesRcvd, -1, buffer).sendToTarget();
+		    		   
 		    		} // data array is full 
+		    		Log.v("receive data  is "+TcpChat.printHexOutput(buffer,totalBytesRcvd),"recv data");
+		    		
+		    		 mHandler.obtainMessage(TcpChat.MESSAGE_READ, totalBytesRcvd, -1, buffer).sendToTarget();
+		    		 totalBytesRcvd = 0;
   	    	 	    	
 	    		} catch (IOException e) {
 					// TODO Auto-generated catch block
@@ -308,13 +337,23 @@ public class TcpChatService {
 	                    // Start the service over to restart listening mode
 	                    //TcpChatService.this.start();
 	                    return;
-				} // Get client connection 
-	    	}
+				} catch(RuntimeException e){
+				
+					connectionLost();
+                    // Start the service over to restart listening mode
+                    //TcpChatService.this.start();
+                    return;
+				}
+	    	}// Get client connection 
         }
 
         public void cancel() {
             try {
-            	clntSock.close();
+            	if(clntSock !=null)
+            	{
+            		clntSock.close();
+            		clntSock = null;
+            	}
             } catch (IOException e) {
                 Log.e(TAG, "close() of connect socket failed", e);
             }
@@ -323,7 +362,7 @@ public class TcpChatService {
     
     
     
-    public class TcpSendThread implements Runnable 
+    public class TcpSendThread extends Thread 
     { 
     	Socket clntSock;
     	int serverPort;
@@ -369,7 +408,7 @@ public class TcpChatService {
 		          			  size = msg.arg1;
 		          			  out.write(buffer,0, size);		
 							
-		          			  mHandler.obtainMessage(TcpChat.MESSAGE_READ, size, -1, buffer).sendToTarget();
+		          			  mHandler.obtainMessage(TcpChat.MESSAGE_WRITE, size, -1, buffer).sendToTarget();
 						} catch (IOException e) {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
@@ -377,6 +416,7 @@ public class TcpChatService {
 								out.close();
 								clntSock.close();					
 								Looper.myLooper().quit();
+								connectionLost();
 							} catch (IOException e1) {
 								// TODO Auto-generated catch block
 								e1.printStackTrace();
@@ -392,9 +432,22 @@ public class TcpChatService {
 	    
 	    public void cancel() {
             try {
-            	out.close();
-				clntSock.close();					
-				Looper.myLooper().quit();
+            	if(out !=null)
+            	{
+            		out.close();
+            		out = null;
+            	}
+            	if(clntSock !=null)
+            	{
+            		clntSock.close();
+            		clntSock = null;
+            	}
+            	
+				if(Looper.myLooper()!=null)
+				{					
+					Looper.myLooper().quit();
+
+				}
             } catch (IOException e) {
                 Log.e(TAG, "close() of connect socket failed", e);
             }
@@ -406,5 +459,39 @@ public class TcpChatService {
               = (ConnectivityManager) ctx.getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
         return activeNetworkInfo != null && activeNetworkInfo.isConnected();
+    }
+    
+    private void initKeepLiveTimer(int seconds)
+    {
+    	if(mTimerTask !=null)
+    	{
+    		mTimerTask.cancel();
+    		mTimerTask=null;
+    	
+    	}
+    	mTimerTask = new KeepliveTimerTask();  
+    	
+    	if(mTimer !=null)
+    	{
+    		mTimer.cancel();
+    		mTimer=null;
+    	}
+    	mTimer = new Timer();
+        mTimer.schedule(mTimerTask, 5, seconds);
+
+    }
+        
+    public void stopKeepLiveTimer()
+    {
+    	mTimer.cancel();
+    	mTimer = null;
+    	mTimerTask.cancel();
+    	mTimerTask = null;
+    }
+    class KeepliveTimerTask extends TimerTask {
+    	private byte[] keepLivePacket = new byte[]{0,0,0,1,55};
+        public void run() {
+        	write(keepLivePacket,keepLivePacket.length);
+        }
     }
 }
