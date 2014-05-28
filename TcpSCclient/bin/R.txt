@@ -139,6 +139,7 @@ int dimen abc_search_view_preferred_width 0x7f08000d
 int dimen abc_search_view_text_min_width 0x7f08000c
 int dimen activity_horizontal_margin 0x7f080011
 int dimen activity_vertical_margin 0x7f080012
+int dimen page_margin 0x7f080013
 int drawable abc_ab_bottom_solid_dark_holo 0x7f020000
 int drawable abc_ab_bottom_solid_light_holo 0x7f020001
 int drawable abc_ab_bottom_transparent_dark_holo 0x7f020002
@@ -227,6 +228,7 @@ int drawable abc_textfield_searchview_holo_light 0x7f020054
 int drawable abc_textfield_searchview_right_holo_dark 0x7f020055
 int drawable abc_textfield_searchview_right_holo_light 0x7f020056
 int drawable ic_launcher 0x7f020057
+int drawable title_curser_icon 0x7f020058
 int id action_bar 0x7f05001c
 int id action_bar_activity_content 0x7f050015
 int id action_bar_container 0x7f05001b
@@ -246,7 +248,6 @@ int id button_send 0x7f05003f
 int id checkbox 0x7f05002d
 int id collapseActionView 0x7f05000d
 int id connect_to_remote 0x7f050045
-int id container 0x7f05003c
 int id default_activity_button 0x7f050028
 int id dialog 0x7f05000e
 int id disableHome 0x7f050008
@@ -269,6 +270,7 @@ int id never 0x7f050009
 int id new_devices 0x7f050043
 int id none 0x7f050010
 int id normal 0x7f050000
+int id pager 0x7f05003c
 int id paired_devices 0x7f050041
 int id progress_circular 0x7f050018
 int id progress_horizontal 0x7f050019
@@ -324,11 +326,13 @@ int layout abc_popup_menu_item_layout 0x7f030014
 int layout abc_search_dropdown_item_icons_2line 0x7f030015
 int layout abc_search_view 0x7f030016
 int layout activity_main 0x7f030017
-int layout device_list 0x7f030018
-int layout device_name 0x7f030019
-int layout fragment_main 0x7f03001a
+int layout chat_view 0x7f030018
+int layout device_list 0x7f030019
+int layout device_name 0x7f03001a
 int layout message 0x7f03001b
-int layout support_simple_spinner_dropdown_item 0x7f03001c
+int layout remote_device_view 0x7f03001c
+int layout setting_view 0x7f03001d
+int layout support_simple_spinner_dropdown_item 0x7f03001e
 int menu main 0x7f0c0000
 int string abc_action_bar_home_description 0x7f0a0001
 int string abc_action_bar_up_description 0x7f0a0002

@@ -66,12 +66,12 @@ public class TcpChatActivity extends ActionBarActivity {
 		super.onCreate(savedInstanceState);		
 		 if(D) Log.e(TAG, "+++ ON CREATE +++");
 	        // Set up the window layout
-	        setContentView(R.layout.activity_main);
+	        setContentView(R.layout.chat_view);
 	
-		if (savedInstanceState == null) {
-			getSupportFragmentManager().beginTransaction()
-					.add(R.id.container, new PlaceholderFragment()).commit();
-		}
+//		if (savedInstanceState == null) {
+//			getSupportFragmentManager().beginTransaction()
+//					.add(R.id.container, new PlaceholderFragment()).commit();
+//		}
         sendForamtSelect = TEXT_FORMAT;
         recvForamtSelect = TEXT_FORMAT;
         //Log.v("hex to byte "+ Integer.valueOf(0x5a),"hex to byte " );
@@ -365,19 +365,19 @@ public class TcpChatActivity extends ActionBarActivity {
 	/**
 	 * A placeholder fragment containing a simple view.
 	 */
-	public static class PlaceholderFragment extends Fragment {
-
-		public PlaceholderFragment() {
-		}
-
-		@Override
-		public View onCreateView(LayoutInflater inflater, ViewGroup container,
-				Bundle savedInstanceState) {
-			View rootView = inflater.inflate(R.layout.fragment_main, container,
-					false);
-			return rootView;
-		}
-	}
+//	public static class PlaceholderFragment extends Fragment {
+//
+//		public PlaceholderFragment() {
+//		}
+//
+//		@Override
+//		public View onCreateView(LayoutInflater inflater, ViewGroup container,
+//				Bundle savedInstanceState) {
+//			View rootView = inflater.inflate(R.layout.fragment_main, container,
+//					false);
+//			return rootView;
+//		}
+//	}
 
     private void selectSendFormat()
     {

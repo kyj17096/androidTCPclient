@@ -249,12 +249,13 @@ public class TcpChatService {
             msg.setData(bundle);
             mHandler.sendMessage(msg);
 
-            setState(STATE_CONNECTED);          
+                    
             
             mRecvThread = new TcpRecvThread(socket);
             mRecvThread.start();
             mSendThread = new TcpSendThread(socket); 
             mSendThread.start();
+            setState(STATE_CONNECTED); 
             initKeepLiveTimer(KEEP_LIVE_INTERVAL);
         }
 
