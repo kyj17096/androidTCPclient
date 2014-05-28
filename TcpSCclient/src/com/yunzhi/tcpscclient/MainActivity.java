@@ -67,7 +67,7 @@ public class MainActivity  extends FragmentActivity /*implements ActionBar.TabLi
     // Key names received from the BluetoothChatService Handler
     public static final String REMOTE_NAME = "remote_name";
     public static final String TOAST = "toast";
-    public ArrayAdapter<String> mConversationArrayAdapter;
+
     
     private TcpChatService mTcpService = null;
     public void onCreate(Bundle savedInstanceState) {
@@ -76,11 +76,11 @@ public class MainActivity  extends FragmentActivity /*implements ActionBar.TabLi
 		if(D) Log.e(TAG, "+++ ON CREATE +++");
         sendForamtSelect = TEXT_FORMAT;
         recvForamtSelect = TEXT_FORMAT;
-        mConversationArrayAdapter = new ArrayAdapter<String>(this, R.layout.message);
         
-/*        mFragmentManger = getSupportFragmentManager();
+        
+        mFragmentManger = getSupportFragmentManager();
         mFragmentTransaction = mFragmentManger.beginTransaction();
-        chatFragment = mFragmentManger.findFragmentByTag(CHAT_FRAGMENT_TAG);
+/*        chatFragment = mFragmentManger.findFragmentByTag(CHAT_FRAGMENT_TAG);
         if (chatFragment == null) {
         	chatFragment = new ChatFragment();
         	mFragmentTransaction.add(chatFragment, CHAT_FRAGMENT_TAG);
@@ -99,25 +99,33 @@ public class MainActivity  extends FragmentActivity /*implements ActionBar.TabLi
 */
         
         PagerAdapter adapter = new FragmentStatePagerAdapter(getSupportFragmentManager()) {
-            @Override
+            
+        	@Override
             public Fragment getItem(int position) {
+        		  Fragment f = null;
+        		  String tag = null;
                 switch (position) {
                     case 0:
-                        return new RemoteListFragment();
-                  
+                        f = new RemoteListFragment();
+                        tag = REMOTE_LIST_FRAGMENT_TAG;
+                        break;
                     case 1:
-                        return new ChatFragment();
-                  
+                        f = new ChatFragment();
+                        tag = CHAT_FRAGMENT_TAG;
+                        break;
                     case 2:
-                    	return new SettingFragment();
-                  
+                    	f = new SettingFragment();
+                    	tag = SETTING_FRAGMENT_TAG;
+                    	break;
                 }
-                return null;
+                
+                //mFragmentTransaction.replace(R.id.pager, f,"").commit();
+                return f;
             }
 
             @Override
             public int getCount() {
-                return 1;
+                return 3;
             }
 
 //            @Override
@@ -271,7 +279,7 @@ public class MainActivity  extends FragmentActivity /*implements ActionBar.TabLi
                 switch (msg.arg1) {
                 case TcpChatService.STATE_CONNECTED:
                     setStatus(getString(R.string.title_connected_to, cf.getConnectedRemoteName()));
-                    mConversationArrayAdapter.clear();
+                    cf.cleanConversation();
                     break;
                 case TcpChatService.STATE_CONNECTING:
                     setStatus(R.string.title_connecting);

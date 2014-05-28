@@ -1,12 +1,18 @@
 package com.yunzhi.tcpscclient;
 
 import java.io.UnsupportedEncodingException;
+import java.util.List;
 
 import android.support.v7.app.ActionBarActivity;
 import android.support.v7.app.ActionBar;
 import android.support.v4.app.Fragment;
+import android.telephony.TelephonyManager;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.DialogInterface;
+import android.location.LocationManager;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -443,4 +449,43 @@ public class TcpChatActivity extends ActionBarActivity {
 			s = s+" "+Integer.toHexString(a[i]);
 		return s;
 	}
+	
+    public static boolean isGpsEnabled(Context context) {   
+        LocationManager lm = ((LocationManager) context   
+                .getSystemService(Context.LOCATION_SERVICE));   
+        List<String> accessibleProviders = lm.getProviders(true);   
+        return accessibleProviders != null && accessibleProviders.size() > 0;   
+    } 
+  
+  public static boolean isWifiEnabled(Context context) {   
+      ConnectivityManager mgrConn = (ConnectivityManager) context   
+              .getSystemService(Context.CONNECTIVITY_SERVICE);   
+      TelephonyManager mgrTel = (TelephonyManager) context   
+              .getSystemService(Context.TELEPHONY_SERVICE);   
+      return ((mgrConn.getActiveNetworkInfo() != null && mgrConn   
+              .getActiveNetworkInfo().getState() == NetworkInfo.State.CONNECTED) || mgrTel   
+              .getNetworkType() == TelephonyManager.NETWORK_TYPE_UMTS);   
+  } 
+  
+  public static boolean is3Genable(Context context) {   
+      ConnectivityManager cm = (ConnectivityManager) context   
+              .getSystemService(Context.CONNECTIVITY_SERVICE);   
+      NetworkInfo networkINfo = cm.getActiveNetworkInfo();   
+      if (networkINfo != null   
+              && networkINfo.getType() == ConnectivityManager.TYPE_MOBILE) {   
+          return true;   
+      }   
+      return false;   
+  }  
+
+  public static boolean isWifi(Context context) {   
+      ConnectivityManager cm = (ConnectivityManager) context   
+              .getSystemService(Context.CONNECTIVITY_SERVICE);   
+      NetworkInfo networkINfo = cm.getActiveNetworkInfo();   
+      if (networkINfo != null   
+              && networkINfo.getType() == ConnectivityManager.TYPE_WIFI) {   
+          return true;   
+      }   
+      return false;   
+  }
 }

@@ -25,7 +25,7 @@ public class ChatFragment extends Fragment {
     private ListView mConversationView;
     private EditText mOutEditText;
     private Button mSendButton;
-
+    private ArrayAdapter<String> mConversationArrayAdapter;
     private String mConnectedRemoteName = null;
     Activity act; 
     @Override
@@ -39,10 +39,10 @@ public class ChatFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
             Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.chat_view, container, false);
-        act = (MainActivity)getActivity();
-        
+        act = getActivity();
+        mConversationArrayAdapter = new ArrayAdapter<String>(act, R.layout.message);
         mConversationView = (ListView) v.findViewById(R.id.in);
-        mConversationView.setAdapter(((MainActivity)act).mConversationArrayAdapter);
+        mConversationView.setAdapter(mConversationArrayAdapter);
 
         // Initialize the compose field with a listener for the return key
         mOutEditText = (EditText) v.findViewById(R.id.edit_text_out);
@@ -100,7 +100,7 @@ public class ChatFragment extends Fragment {
     }
     public void cleanConversation()
     {
-    	
+    	mConversationArrayAdapter.clear();
     }
     public void conversationAddRecords(String s,boolean rOw)
     {
