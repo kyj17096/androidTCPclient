@@ -32,15 +32,17 @@
         android:layout_height="wrap_content"
         >
         <EditText android:id="@+id/edit_text_out"
+            android:paddingLeft="3px"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="45dp"
             android:layout_weight="1"
             android:layout_gravity="bottom"
+            android:background="@drawable/bg_edittext"
         />
         <Button android:id="@+id/button_send"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/send"
+            android:text="send"
         />
     </LinearLayout>
 </LinearLayout>

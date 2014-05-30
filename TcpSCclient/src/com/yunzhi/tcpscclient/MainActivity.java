@@ -1,47 +1,59 @@
 package com.yunzhi.tcpscclient;
 
+
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 
-
-import android.app.ActionBar;
 import android.app.Activity;
 import android.app.AlertDialog;
+
+import android.content.Context;
 import android.content.DialogInterface;
-import android.graphics.BitmapFactory;
-import android.graphics.Matrix;
+import android.content.res.Configuration;
+import android.content.res.TypedArray;
+import android.location.LocationManager;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.os.Parcelable;
-import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
+import android.support.v4.app.ActionBarDrawerToggle;
+import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentStatePagerAdapter;
 import android.support.v4.app.FragmentTransaction;
-import android.support.v4.view.PagerAdapter;
-import android.support.v4.view.ViewPager;
-import android.support.v4.view.ViewPager.OnPageChangeListener;
-import android.util.DisplayMetrics;
+import android.support.v4.widget.DrawerLayout;
+import android.telephony.TelephonyManager;
 import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.animation.Animation;
-import android.view.animation.TranslateAnimation;
+import android.view.Window;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ImageView;
 import android.widget.ListView;
-import android.widget.TextView;
 import android.widget.Toast;
 
-public class MainActivity  extends FragmentActivity /*implements ActionBar.TabListener*/ {
+public class MainActivity extends FragmentActivity {
+	private DrawerLayout mDrawerLayout;
+	private ListView mDrawerList;
+	private ActionBarDrawerToggle mDrawerToggle;
+
+	// nav drawer title
+	private CharSequence mDrawerTitle;
+
+	// used to store app title
+	private CharSequence mTitle;
+
+	// slide menu items
+	private String[] navMenuTitles;
+	private TypedArray navMenuIcons;
+
+	private ArrayList<NavDrawerItem> navDrawerItems;
+	private NavDrawerListAdapter adapter;
+
 	
-    private ViewPager mPager;
     // Debugging
     private static final String TAG = "TcpChat";
     private static final boolean D = true;
@@ -56,8 +68,6 @@ public class MainActivity  extends FragmentActivity /*implements ActionBar.TabLi
 	private int TEXT_FORMAT = 1;
 	private int sendForamtSelect;
 	private int recvForamtSelect;
-	FragmentManager mFragmentManger;
-	FragmentTransaction mFragmentTransaction;
 	Fragment chatFragment;
 	Fragment remoteListFragment;
 	Fragment settingFragment;
@@ -67,105 +77,207 @@ public class MainActivity  extends FragmentActivity /*implements ActionBar.TabLi
     // Key names received from the BluetoothChatService Handler
     public static final String REMOTE_NAME = "remote_name";
     public static final String TOAST = "toast";
-
-    
+    public ArrayAdapter<String> mConversationArrayAdapter;
     private TcpChatService mTcpService = null;
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+    public String mConnectedRemoteName = null;
+	@Override
+	protected void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
+		setContentView(R.layout.activity_main);
+		 
 		if(D) Log.e(TAG, "+++ ON CREATE +++");
         sendForamtSelect = TEXT_FORMAT;
         recvForamtSelect = TEXT_FORMAT;
+        mConversationArrayAdapter = new ArrayAdapter<String>(this, R.layout.message);
+        setProgressBarIndeterminateVisibility(false);
         
-        
-        mFragmentManger = getSupportFragmentManager();
-        mFragmentTransaction = mFragmentManger.beginTransaction();
-/*        chatFragment = mFragmentManger.findFragmentByTag(CHAT_FRAGMENT_TAG);
-        if (chatFragment == null) {
-        	chatFragment = new ChatFragment();
-        	mFragmentTransaction.add(chatFragment, CHAT_FRAGMENT_TAG);
-        }
-        remoteListFragment = mFragmentManger.findFragmentByTag(REMOTE_LIST_FRAGMENT_TAG);
-        if (remoteListFragment == null) {
-        	remoteListFragment = new RemoteListFragment();
-        	mFragmentTransaction.add(remoteListFragment, REMOTE_LIST_FRAGMENT_TAG);
-        }
-        settingFragment = mFragmentManger.findFragmentByTag(SETTING_FRAGMENT_TAG);
-        if (settingFragment == null) {
-        	settingFragment = new SettingFragment();
-        	mFragmentTransaction.add(settingFragment, SETTING_FRAGMENT_TAG);
-        }
-        mFragmentTransaction.commit();
-*/
-        
-        PagerAdapter adapter = new FragmentStatePagerAdapter(getSupportFragmentManager()) {
-            
-        	@Override
-            public Fragment getItem(int position) {
-        		  Fragment f = null;
-        		  String tag = null;
-                switch (position) {
-                    case 0:
-                        f = new RemoteListFragment();
-                        tag = REMOTE_LIST_FRAGMENT_TAG;
-                        break;
-                    case 1:
-                        f = new ChatFragment();
-                        tag = CHAT_FRAGMENT_TAG;
-                        break;
-                    case 2:
-                    	f = new SettingFragment();
-                    	tag = SETTING_FRAGMENT_TAG;
-                    	break;
-                }
-                
-                //mFragmentTransaction.replace(R.id.pager, f,"").commit();
-                return f;
-            }
+		mTitle = mDrawerTitle = getTitle();
 
-            @Override
-            public int getCount() {
-                return 3;
-            }
+		// load slide menu items
+		navMenuTitles = getResources().getStringArray(R.array.nav_drawer_items);
 
-//            @Override
-//            public CharSequence getPageTitle(int position) {
-//                switch (position) {
-//                    case 0:
-//                        return getString(R.string.default_fragment);
-//                    case 1:
-//                        return getString(R.string.animation_fragment);
-//                    case 2:
-//                    	return getString(R.string.footer_fragment);
-//                }
-//                return null;
-//            }
-        };
+		// nav drawer icons from resources
+		navMenuIcons = getResources()
+				.obtainTypedArray(R.array.nav_drawer_icons);
 
-        mPager = (ViewPager) findViewById(R.id.pager);
-        mPager.setAdapter(adapter);
-        mPager.setOnPageChangeListener(new ViewPager.SimpleOnPageChangeListener() {
-            @Override
-            public void onPageSelected(int position) {
-                //getActionBar().setSelectedNavigationItem(position);
-            }
-        });
-        mPager.setCurrentItem(1);
-        mPager.setPageMargin(getResources().getDimensionPixelSize(R.dimen.page_margin));
+		mDrawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
+		mDrawerList = (ListView) findViewById(R.id.list_slidermenu);
 
-        getActionBar().setNavigationMode(ActionBar.NAVIGATION_MODE_STANDARD);
+		navDrawerItems = new ArrayList<NavDrawerItem>();
 
-//        for (int position = 0; position < adapter.getCount(); position++) {
-//            getActionBar().addTab(getActionBar().newTab()
-//                    .setText(adapter.getPageTitle(position))
-//                    .setTabListener(this));
-//        }
+		// adding nav drawer items to array
+		// Home
+		navDrawerItems.add(new NavDrawerItem(navMenuTitles[0], navMenuIcons.getResourceId(0, -1)));
+		// Find People
+		navDrawerItems.add(new NavDrawerItem(navMenuTitles[1], navMenuIcons.getResourceId(1, -1)));
+		// Photos
+		navDrawerItems.add(new NavDrawerItem(navMenuTitles[2], navMenuIcons.getResourceId(2, -1)));
+		// Communities, Will add a counter here
+		navDrawerItems.add(new NavDrawerItem(navMenuTitles[3], navMenuIcons.getResourceId(3, -1), true, "22"));
+		// Pages
+		navDrawerItems.add(new NavDrawerItem(navMenuTitles[4], navMenuIcons.getResourceId(4, -1)));
+		// What's hot, We  will add a counter here
+		navDrawerItems.add(new NavDrawerItem(navMenuTitles[5], navMenuIcons.getResourceId(5, -1), true, "50+"));
+		
 
-        getActionBar().setDisplayShowHomeEnabled(false);
-        getActionBar().setDisplayShowTitleEnabled(true);
-        
-        
-    }
+		// Recycle the typed array
+		navMenuIcons.recycle();
+
+		mDrawerList.setOnItemClickListener(new SlideMenuClickListener());
+
+		// setting the nav drawer list adapter
+		adapter = new NavDrawerListAdapter(getApplicationContext(),
+				navDrawerItems);
+		mDrawerList.setAdapter(adapter);
+
+		// enabling action bar app icon and behaving it as toggle button
+		getActionBar().setDisplayHomeAsUpEnabled(true);
+		getActionBar().setHomeButtonEnabled(true);
+
+		mDrawerToggle = new ActionBarDrawerToggle(this, mDrawerLayout,
+				R.drawable.ic_drawer, //nav menu toggle icon
+				R.string.app_name, // nav drawer open - description for accessibility
+				R.string.app_name // nav drawer close - description for accessibility
+		) {
+			public void onDrawerClosed(View view) {
+				getActionBar().setTitle(mTitle);
+				// calling onPrepareOptionsMenu() to show action bar icons
+				invalidateOptionsMenu();
+			}
+
+			public void onDrawerOpened(View drawerView) {
+				getActionBar().setTitle(mDrawerTitle);
+				// calling onPrepareOptionsMenu() to hide action bar icons
+				invalidateOptionsMenu();
+			}
+		};
+		mDrawerLayout.setDrawerListener(mDrawerToggle);
+
+		if (savedInstanceState == null) {
+			// on first time display view for first nav item
+			displayView(0);
+		}
+	}
+
+	/**
+	 * Slide menu item click listener
+	 * */
+	private class SlideMenuClickListener implements
+			ListView.OnItemClickListener {
+		@Override
+		public void onItemClick(AdapterView<?> parent, View view, int position,
+				long id) {
+			// display view for selected nav drawer item
+			displayView(position);
+		}
+	}
+
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+		getMenuInflater().inflate(R.menu.main, menu);
+		return true;
+	}
+
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		// toggle nav drawer on selecting action bar app icon/title
+		if (mDrawerToggle.onOptionsItemSelected(item)) {
+			return true;
+		}
+		// Handle action bar actions click
+		switch (item.getItemId()) {
+		case R.id.action_settings:
+			            
+			return true;
+		case R.id.connect_to_server:
+			connectDevice();
+			return true;
+		default:
+			return super.onOptionsItemSelected(item);
+		}
+	}
+
+	/* *
+	 * Called when invalidateOptionsMenu() is triggered
+	 */
+	@Override
+	public boolean onPrepareOptionsMenu(Menu menu) {
+		// if nav drawer is opened, hide the action items
+		boolean drawerOpen = mDrawerLayout.isDrawerOpen(mDrawerList);
+		menu.findItem(R.id.action_settings).setVisible(!drawerOpen);
+		return super.onPrepareOptionsMenu(menu);
+	}
+
+	/**
+	 * Diplaying fragment view for selected nav drawer list item
+	 * */
+	private void displayView(int position) {
+		// update the main content by replacing fragments
+		Fragment fragment = null;
+		switch (position) {
+		case 0:
+			fragment = new ChatFragment();
+			break;
+		case 1:
+			fragment = new FindPeopleFragment();
+			break;
+		case 2:
+			fragment = new PhotosFragment();
+			break;
+		case 3:
+			fragment = new CommunityFragment();
+			break;
+		case 4:
+			fragment = new PagesFragment();
+			break;
+		case 5:
+			fragment = new WhatsHotFragment();
+			break;
+
+		default:
+			break;
+		}
+
+		if (fragment != null) {
+			 getSupportFragmentManager().beginTransaction().replace(R.id.frame_container, fragment).commit();
+
+			// update selected item and title, then close the drawer
+			mDrawerList.setItemChecked(position, true);
+			mDrawerList.setSelection(position);
+			setTitle(navMenuTitles[position]);
+			mDrawerLayout.closeDrawer(mDrawerList);
+		} else {
+			// error in creating fragment
+			Log.e("MainActivity", "Error in creating fragment");
+		}
+	}
+
+	@Override
+	public void setTitle(CharSequence title) {
+		mTitle = title;
+		getActionBar().setTitle(mTitle);
+	}
+
+	/**
+	 * When using the ActionBarDrawerToggle, you must call it during
+	 * onPostCreate() and onConfigurationChanged()...
+	 */
+
+	@Override
+	protected void onPostCreate(Bundle savedInstanceState) {
+		super.onPostCreate(savedInstanceState);
+		// Sync the toggle state after onRestoreInstanceState has occurred.
+		mDrawerToggle.syncState();
+	}
+
+	@Override
+	public void onConfigurationChanged(Configuration newConfig) {
+		super.onConfigurationChanged(newConfig);
+		// Pass any configuration change to the drawer toggls
+		mDrawerToggle.onConfigurationChanged(newConfig);
+	}
+	
     @Override
     public void onStart() {
         super.onStart();
@@ -251,11 +363,9 @@ public class MainActivity  extends FragmentActivity /*implements ActionBar.TabLi
 				} catch (UnsupportedEncodingException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
-				}
-        		 
+				}       		 
                  
         	}
-        	((ChatFragment)(mFragmentManger.findFragmentByTag("chat_fragment"))).cleanOutEditView();
            
         }
     }
@@ -272,16 +382,18 @@ public class MainActivity  extends FragmentActivity /*implements ActionBar.TabLi
         @Override
         public void handleMessage(Message msg) {
             String s = "";
-            ChatFragment cf = (ChatFragment)(mFragmentManger.findFragmentByTag(CHAT_FRAGMENT_TAG));
+           
             switch (msg.what) {
             case MESSAGE_STATE_CHANGE:
                 if(D) Log.i(TAG, "MESSAGE_STATE_CHANGE: " + msg.arg1);
                 switch (msg.arg1) {
                 case TcpChatService.STATE_CONNECTED:
-                    setStatus(getString(R.string.title_connected_to, cf.getConnectedRemoteName()));
-                    cf.cleanConversation();
+                    setStatus(getString(R.string.title_connected_to, mConnectedRemoteName));
+                    setProgressBarIndeterminateVisibility(false);
+                    mConversationArrayAdapter.clear();
                     break;
                 case TcpChatService.STATE_CONNECTING:
+                	setProgressBarIndeterminateVisibility(true);
                     setStatus(R.string.title_connecting);
                     break;
                 case TcpChatService.STATE_NONE:
@@ -309,7 +421,7 @@ public class MainActivity  extends FragmentActivity /*implements ActionBar.TabLi
 					}
                 	
                 }
-                cf.conversationAddRecords(s,true);
+                mConversationArrayAdapter.add("Me:  " + s);
                 break;
             case MESSAGE_READ:
                 byte[] readBuf = (byte[]) msg.obj;
@@ -336,15 +448,14 @@ public class MainActivity  extends FragmentActivity /*implements ActionBar.TabLi
 					}
                 	
                 }
-                cf.conversationAddRecords(s,false);
+                mConversationArrayAdapter.add(mConnectedRemoteName+":  " + s);  
                 break;
             case MESSAGE_REMOTE_NAME:
                 // save the connected device's name
             	String remoteName = msg.getData().getString(REMOTE_NAME);
                 Toast.makeText(getApplicationContext(), "Connected to "
                                + remoteName, Toast.LENGTH_SHORT).show();
-                if(cf == null)Log.v("cf is == null", "cf is null");
-                cf.setConnectedRemoteName(remoteName);
+                mConnectedRemoteName = remoteName;
                 break;
             case MESSAGE_TOAST:
                 Toast.makeText(getApplicationContext(), msg.getData().getString(TOAST),
@@ -354,35 +465,6 @@ public class MainActivity  extends FragmentActivity /*implements ActionBar.TabLi
         }
     };
    
-//	@Override
-//	public boolean onCreateOptionsMenu(Menu menu) {
-//
-//		// Inflate the menu; this adds items to the action bar if it is present.
-//		getMenuInflater().inflate(R.menu.main, menu);
-//		return true;
-//	}
-//
-//	@Override
-//	public boolean onOptionsItemSelected(MenuItem item) {
-//		// Handle action bar item clicks here. The action bar will
-//		// automatically handle clicks on the Home/Up button, so long
-//		// as you specify a parent activity in AndroidManifest.xml.
-//        switch (item.getItemId()) {
-//        case R.id.connect_to_remote:
-//            // Launch the DeviceListActivity to see devices and do scan
-//        	 connectDevice();
-//            return true;
-//        case R.id.select_send_format:
-//            // Ensure this device is discoverable by others
-//        	selectSendFormat();
-//            return true;
-//        case R.id.select_receive_format:
-//            // Ensure this device is discoverable by others
-//        	selectRecvFormat();
-//            return true;
-//        }
-//        return false;
-//	}
     private void connectDevice() {
         // Get the device MAC address
         mTcpService.start();
@@ -417,9 +499,9 @@ public class MainActivity  extends FragmentActivity /*implements ActionBar.TabLi
     						public void onClick(DialogInterface dialog, int which) {
     							if (which == 0) {
     								recvForamtSelect = HEX_FORMAT;
-    			                     //DisplayToast("Ê≠£Á°ÆÁ≠îÊ°àÔºö"+mRadioButton_2.getText()+"ÔºåÊÅ≠Âñú‰Ω†ÔºåÂõûÁ≠îÊ≠£Á°Æ");
+    			                     //DisplayToast("’˝»∑¥∞∏£∫"+mRadioButton_2.getText()+"£¨πßœ≤ƒ„£¨ªÿ¥’˝»∑");
     			                 } else if(which == 1){
-    			                     //DisplayToast("ÂõûÁ≠îÈîôËØØÔºÅ");
+    			                     //DisplayToast("ªÿ¥¥ÌŒÛ£°");
     			                	 recvForamtSelect = TEXT_FORMAT;
     			                 }
     							dialog.dismiss();
@@ -452,19 +534,43 @@ public class MainActivity  extends FragmentActivity /*implements ActionBar.TabLi
 			s = s+" "+Integer.toHexString(a[i]);
 		return s;
 	}
-//    @Override
-//    public void onTabSelected(ActionBar.Tab tab, FragmentTransaction fragmentTransaction) {
-//        mPager.setCurrentItem(tab.getPosition());
-//    }
-//
-//    @Override
-//    public void onTabUnselected(ActionBar.Tab tab, FragmentTransaction fragmentTransaction) {
-//    }
-//
-//    @Override
-//    public void onTabReselected(ActionBar.Tab tab, FragmentTransaction fragmentTransaction) {
-//    }
 	
-	
-}
+	   public static boolean isGpsEnabled(Context context) {   
+	        LocationManager lm = ((LocationManager) context   
+	                .getSystemService(Context.LOCATION_SERVICE));   
+	        List<String> accessibleProviders = lm.getProviders(true);   
+	        return accessibleProviders != null && accessibleProviders.size() > 0;   
+	    } 
+	  
+	  public static boolean isWifiEnabled(Context context) {   
+	      ConnectivityManager mgrConn = (ConnectivityManager) context   
+	              .getSystemService(Context.CONNECTIVITY_SERVICE);   
+	      TelephonyManager mgrTel = (TelephonyManager) context   
+	              .getSystemService(Context.TELEPHONY_SERVICE);   
+	      return ((mgrConn.getActiveNetworkInfo() != null && mgrConn   
+	              .getActiveNetworkInfo().getState() == NetworkInfo.State.CONNECTED) || mgrTel   
+	              .getNetworkType() == TelephonyManager.NETWORK_TYPE_UMTS);   
+	  } 
+	  
+	  public static boolean is3Genable(Context context) {   
+	      ConnectivityManager cm = (ConnectivityManager) context   
+	              .getSystemService(Context.CONNECTIVITY_SERVICE);   
+	      NetworkInfo networkINfo = cm.getActiveNetworkInfo();   
+	      if (networkINfo != null   
+	              && networkINfo.getType() == ConnectivityManager.TYPE_MOBILE) {   
+	          return true;   
+	      }   
+	      return false;   
+	  }  
 
+	  public static boolean isWifi(Context context) {   
+	      ConnectivityManager cm = (ConnectivityManager) context   
+	              .getSystemService(Context.CONNECTIVITY_SERVICE);   
+	      NetworkInfo networkINfo = cm.getActiveNetworkInfo();   
+	      if (networkINfo != null   
+	              && networkINfo.getType() == ConnectivityManager.TYPE_WIFI) {   
+	          return true;   
+	      }   
+	      return false;   
+	  }
+}

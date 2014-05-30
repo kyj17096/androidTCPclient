@@ -93,7 +93,7 @@ public class TcpChatService {
         mState = state;
 
         // Give the new state to the Handler so the UI Activity can update
-        mHandler.obtainMessage(TcpChatActivity.MESSAGE_STATE_CHANGE, state, -1).sendToTarget();
+        mHandler.obtainMessage(MainActivity.MESSAGE_STATE_CHANGE, state, -1).sendToTarget();
     }
 
     /**
@@ -122,7 +122,7 @@ public class TcpChatService {
         mconnectToRemoteThread = new TcpConnectThread(remoteIp, SERVER_PORT);
         mconnectToRemoteThread.start();
         setState(STATE_CONNECTING);
-        mHandler.obtainMessage(TcpChatActivity.MESSAGE_STATE_CHANGE,STATE_CONNECTING,-1).sendToTarget();
+        mHandler.obtainMessage(MainActivity.MESSAGE_STATE_CHANGE,STATE_CONNECTING,-1).sendToTarget();
       
     }
 
@@ -148,9 +148,9 @@ public class TcpChatService {
         	mRecvThread = null;
         }
 
-      
+        stopKeepLiveTimer();
         setState(STATE_NONE);
-        mHandler.obtainMessage(TcpChatActivity.MESSAGE_STATE_CHANGE,STATE_NONE,-1).sendToTarget();
+        mHandler.obtainMessage(MainActivity.MESSAGE_STATE_CHANGE,STATE_NONE,-1).sendToTarget();
     }
 
     /**
@@ -180,7 +180,8 @@ public class TcpChatService {
         // Start the service over to restart listening mode
         //TcpChatService.this.start();
     	setState(STATE_NONE);
-    	mHandler.obtainMessage(TcpChatActivity.MESSAGE_STATE_CHANGE,STATE_NONE,-1).sendToTarget();
+    	mHandler.obtainMessage(MainActivity.MESSAGE_STATE_CHANGE,STATE_NONE,-1).sendToTarget();
+    	stop();
     }
 
     /**
@@ -190,16 +191,17 @@ public class TcpChatService {
         // Send a failure message back to the Activity
     	setState(STATE_NONE);
     	messageForToast("Device connection was lost");
-    	mHandler.obtainMessage(TcpChatActivity.MESSAGE_STATE_CHANGE,STATE_NONE,-1).sendToTarget();
+    	mHandler.obtainMessage(MainActivity.MESSAGE_STATE_CHANGE,STATE_NONE,-1).sendToTarget();
+    	stop();
         // Start the service over to restart listening mode
        // TcpChatService.this.start();
     }
 
     public void messageForToast(String m )
     {      
-    	Message msg = mHandler.obtainMessage(TcpChatActivity.MESSAGE_TOAST);
+    	Message msg = mHandler.obtainMessage(MainActivity.MESSAGE_TOAST);
 	    Bundle bundle = new Bundle();
-	    bundle.putString(TcpChatActivity.TOAST, m);
+	    bundle.putString(MainActivity.TOAST, m);
 	    msg.setData(bundle);
 	    mHandler.sendMessage(msg);
     }
@@ -243,9 +245,9 @@ public class TcpChatService {
     		}
 
             // Send the name of the connected device back to the UI Activity
-            Message msg = mHandler.obtainMessage(TcpChatActivity.MESSAGE_REMOTE_NAME);
+            Message msg = mHandler.obtainMessage(MainActivity.MESSAGE_REMOTE_NAME);
             Bundle bundle = new Bundle();
-            bundle.putString(TcpChatActivity.REMOTE_NAME, "server");
+            bundle.putString(MainActivity.REMOTE_NAME, "server");
             msg.setData(bundle);
             mHandler.sendMessage(msg);
 
@@ -313,8 +315,8 @@ public class TcpChatService {
 	    				throw new SocketException("Connection closed prematurely"); 
 	    				
 	    			}
-	    	    	Log.v("receive length byte is "+TcpChatActivity.printHexOutput(buffer,4),"recv data");
-	    	    	length = (int) TcpChatActivity.bigEndianArrayToInt(buffer,0,4);
+	    	    	Log.v("receive length byte is "+MainActivity.printHexOutput(buffer,4),"recv data");
+	    	    	length = (int) MainActivity.bigEndianArrayToInt(buffer,0,4);
 	    	    	
 		    		while (totalBytesRcvd < length)
 		    		{ 
@@ -326,9 +328,9 @@ public class TcpChatService {
 		    			totalBytesRcvd += bytesRcvd; 
 		    		   
 		    		} // data array is full 
-		    		Log.v("receive data  is "+TcpChatActivity.printHexOutput(buffer,totalBytesRcvd),"recv data");
+		    		Log.v("receive data  is "+MainActivity.printHexOutput(buffer,totalBytesRcvd),"recv data");
 		    		
-		    		 mHandler.obtainMessage(TcpChatActivity.MESSAGE_READ, totalBytesRcvd, -1, buffer).sendToTarget();
+		    		 mHandler.obtainMessage(MainActivity.MESSAGE_READ, totalBytesRcvd, -1, buffer).sendToTarget();
 		    		 totalBytesRcvd = 0;
   	    	 	    	
 	    		} catch (IOException e) {
@@ -409,7 +411,7 @@ public class TcpChatService {
 		          			  size = msg.arg1;
 		          			  out.write(buffer,0, size);		
 							
-		          			  mHandler.obtainMessage(TcpChatActivity.MESSAGE_WRITE, size, -1, buffer).sendToTarget();
+		          			  mHandler.obtainMessage(MainActivity.MESSAGE_WRITE, size, -1, buffer).sendToTarget();
 						} catch (IOException e) {
 							// TODO Auto-generated catch block
 							e.printStackTrace();

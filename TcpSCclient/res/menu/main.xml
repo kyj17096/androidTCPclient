@@ -1,19 +1,14 @@
-<menu xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
-    tools:context="com.yunzhi.tcpscclient.MainActivity" >
-
-    <item android:id="@+id/connect_to_remote"
-          android:icon="@android:drawable/ic_menu_search"
-          android:title="@string/connect_to_remote"
-          android:showAsAction="never|withText" />
-    <item android:id="@+id/select_send_format"
-          android:icon="@android:drawable/ic_menu_mylocation"
-          android:title="@string/select_send_format"
-          android:showAsAction="never|withText" />
-    <item android:id="@+id/select_receive_format"
-          android:icon="@android:drawable/ic_menu_mylocation"
-          android:title="@string/select_receive_format"
-          android:showAsAction="never|withText" />
+<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+    <item
+        android:id="@+id/connect_to_server"
+        android:orderInCategory="100"
+        android:showAsAction="never"
+        android:icon="@drawable/ic_connect"
+        android:title="@string/connect_to_server"/>
+    <item
+        android:id="@+id/action_settings"
+        android:orderInCategory="100"
+        android:showAsAction="never"
+        android:title="@string/action_settings"/>
 
 </menu>

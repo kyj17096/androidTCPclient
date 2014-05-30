@@ -25,8 +25,9 @@ public class ChatFragment extends Fragment {
     private ListView mConversationView;
     private EditText mOutEditText;
     private Button mSendButton;
-    private ArrayAdapter<String> mConversationArrayAdapter;
+
     private String mConnectedRemoteName = null;
+    public ArrayAdapter<String> mConversationArrayAdapter;
     Activity act; 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -40,21 +41,23 @@ public class ChatFragment extends Fragment {
             Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.chat_view, container, false);
         act = getActivity();
-        mConversationArrayAdapter = new ArrayAdapter<String>(act, R.layout.message);
+       
         mConversationView = (ListView) v.findViewById(R.id.in);
+        mConnectedRemoteName = ((MainActivity)act).mConnectedRemoteName;
+        mConversationArrayAdapter = ((MainActivity)act).mConversationArrayAdapter;
         mConversationView.setAdapter(mConversationArrayAdapter);
 
         // Initialize the compose field with a listener for the return key
         mOutEditText = (EditText) v.findViewById(R.id.edit_text_out);
         mOutEditText.setOnEditorActionListener(mWriteListener);
-
+        
         // Initialize the send button with a listener that for click events
         mSendButton = (Button) v.findViewById(R.id.button_send);
         mSendButton.setOnClickListener(new OnClickListener() {
             public void onClick(View v) {
                 // Send a message using content of the edit text widget
-                TextView view = (TextView) v.findViewById(R.id.edit_text_out);
-                String message = view.getText().toString();
+               
+                String message = mOutEditText.getText().toString();
                 ((MainActivity)act).sendMessage(message);
             }
         });
@@ -94,27 +97,5 @@ public class ChatFragment extends Fragment {
             }
         };
         
-    public void cleanOutEditView()
-    {
-    	 mOutEditText.setText("");
-    }
-    public void cleanConversation()
-    {
-    	mConversationArrayAdapter.clear();
-    }
-    public void conversationAddRecords(String s,boolean rOw)
-    {
-    	if(rOw == true)
-    		mConversationArrayAdapter.add("Me:  " + s);
-    	else
-    		mConversationArrayAdapter.add(mConnectedRemoteName+":  " + s);    
-    }
-    public void setConnectedRemoteName(String s)
-    {
-    	mConnectedRemoteName =s ;
-    }
-    public String getConnectedRemoteName()
-    {
-    	return mConnectedRemoteName ;
-    }
+
 }
