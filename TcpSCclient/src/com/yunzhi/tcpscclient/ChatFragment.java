@@ -1,5 +1,8 @@
 package com.yunzhi.tcpscclient;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import android.app.Activity;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
@@ -58,7 +61,16 @@ public class ChatFragment extends Fragment {
                 // Send a message using content of the edit text widget
                
                 String message = mOutEditText.getText().toString();
-                ((MainActivity)act).sendMessage(message);
+                JSONObject data = new JSONObject(); 
+                try {
+					data.put("command", "data_to_peer");
+					data.put("command_to_device", message);
+				} catch (JSONException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+                
+                ((MainActivity)act).sendMessage(data.toString());
             }
         });
         return v;

@@ -5,6 +5,9 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import android.app.Activity;
 import android.app.AlertDialog;
 
@@ -322,49 +325,39 @@ public class MainActivity extends FragmentActivity {
         // Check that there's actually something to send
         if (message.length() > 0) {
             // Get the message bytes and tell the BluetoothChatService to write
-        	if(sendForamtSelect == HEX_FORMAT)
+//        	if(sendForamtSelect == HEX_FORMAT)
+//        	{
+//        		String[] strArray= null;
+//        		if(message.contains(","))
+//        		{
+//        			strArray = message.split(",");
+//        		}
+//        		else if(message.contains(" "))
+//        		{
+//        			strArray = message.split(" ");
+//        		}
+//        		for(int i =0;i< strArray.length;i++)
+//        		{
+//        		
+//        			String temp = strArray[i].trim();
+//        			if(temp==null)
+//        			{
+//        				Toast.makeText(this, "please input right format data, like 0x1e 0x2e 0x45 ... or 0x2e,0x2e,0x45", Toast.LENGTH_SHORT).show();
+//        			}
+//        			if(!temp.contains("0x"))
+//        				sendBuf[i+4] = Integer.valueOf("0x"+temp).byteValue();
+//        			
+//        			intToBigEndianArray(sendBuf,strArray.length,0,4);
+//        			mTcpService.write(sendBuf,strArray.length+4);
+//        			Log.v("send data is "+printHexOutput(sendBuf,strArray.length+4),"send data");
+//        		}
+//        		
+//        		
+//        	}
+//        	else
         	{
-        		String[] strArray= null;
-        		if(message.contains(","))
-        		{
-        			strArray = message.split(",");
-        		}
-        		else if(message.contains(" "))
-        		{
-        			strArray = message.split(" ");
-        		}
-        		for(int i =0;i< strArray.length;i++)
-        		{
-        		
-        			String temp = strArray[i].trim();
-        			if(temp==null)
-        			{
-        				Toast.makeText(this, "please input right format data, like 0x1e 0x2e 0x45 ... or 0x2e,0x2e,0x45", Toast.LENGTH_SHORT).show();
-        			}
-        			if(!temp.contains("0x"))
-        				sendBuf[i+4] = Integer.valueOf("0x"+temp).byteValue();
-        			
-        			intToBigEndianArray(sendBuf,strArray.length,0,4);
-        			mTcpService.write(sendBuf,strArray.length+4);
-        			Log.v("send data is "+printHexOutput(sendBuf,strArray.length+4),"send data");
-        		}
-        		
-        		
-        	}
-        	else
-        	{
-        		  
-				try {
-					byte[] send = message.getBytes("UTF-8");
-					intToBigEndianArray(sendBuf,send.length,0,4);
-					System.arraycopy(send, 0, sendBuf, 4, send.length);
-					mTcpService.write(sendBuf,send.length+4);
-					Log.v("send data is "+printHexOutput(sendBuf,send.length+4),"send data");
-				} catch (UnsupportedEncodingException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}       		 
-                 
+        		 								
+				mTcpService.write(message);                 
         	}
            
         }
@@ -424,31 +417,56 @@ public class MainActivity extends FragmentActivity {
                 mConversationArrayAdapter.add("Me:  " + s);
                 break;
             case MESSAGE_READ:
-                byte[] readBuf = (byte[]) msg.obj;
-            
-                // construct a string from the valid bytes in the buffer
-                //String readMessage = new String(readBuf, 0, msg.arg1);
-                //mConversationArrayAdapter.add(mConnectedRemoteName+":  " + readMessage);
-                if(recvForamtSelect == HEX_FORMAT)
-                {
-                	
-                	for(int i = 0;i< msg.arg1;i++)
-                		s = s+" "+Integer.toHexString(readBuf[i]);
-                	
-                	
-                }
-                else
-                {
-					try {
-						s = new String(readBuf,0,msg.arg1,"UTF-8");					
-						
-					} catch (UnsupportedEncodingException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
+//                byte[] readBuf = (byte[]) msg.obj;
+//            
+//                // construct a string from the valid bytes in the buffer
+//                //String readMessage = new String(readBuf, 0, msg.arg1);
+//                //mConversationArrayAdapter.add(mConnectedRemoteName+":  " + readMessage);
+//                if(recvForamtSelect == HEX_FORMAT)
+//                {
+//                	
+//                	for(int i = 0;i< msg.arg1;i++)
+//                		s = s+" "+Integer.toHexString(readBuf[i]);
+//                	
+//                	
+//                }
+//                else
+//                {
+//					try {
+//						s = new String(readBuf,0,msg.arg1,"UTF-8");					
+//						
+//					} catch (UnsupportedEncodingException e) {
+//						// TODO Auto-generated catch block
+//						e.printStackTrace();
+//					}
+//                	
+//                }
+            	String dis = "";
+				try {
+					JSONObject result = new JSONObject((String)msg.obj);
+			
+					String data = (String) result.get("command");
+					if(data.equals("connect_status"))
+					{
+						String status = (String) result.get("connect_status");
+						dis = status;
 					}
-                	
-                }
-                mConversationArrayAdapter.add(mConnectedRemoteName+":  " + s);  
+					else if(data.equals("login_status"))
+					{
+						String status = (String) result.get("login_status");
+						dis = status;
+					}
+					else if(data.equals("data_to_peer"))
+					{
+						String status = (String) result.get("command_to_device");
+						dis = status;
+					} 
+					mConversationArrayAdapter.add(mConnectedRemoteName+":  " + dis ); 
+				} catch (JSONException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} 
+                 
                 break;
             case MESSAGE_REMOTE_NAME:
                 // save the connected device's name

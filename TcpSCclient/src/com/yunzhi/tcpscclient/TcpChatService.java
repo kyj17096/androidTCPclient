@@ -19,12 +19,16 @@ package com.yunzhi.tcpscclient;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.UUID;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -158,17 +162,38 @@ public class TcpChatService {
      * @param out The bytes to write
      * @see ConnectedThread#write(byte[])
      */
-    public void write(byte[] out,int size) {
+    public void write(String s) {
         // Synchronize a copy of the ConnectedThread
         synchronized (this) {
             if (mState != STATE_CONNECTED) return;
         }
         // Perform the write unsynchronized
-        if(mSendThread == null)Log.v("send thread mSendThread == null","send thread mSendThread == null");
-        if(mSendThread.sendHandler == null)Log.v("send thread mSendThread.sendHandler == null ","send thread mSendThread.sendHandler == null");
-        if(out == null)Log.v("send thread out == null","send thread out == null");
+        if(mSendThread == null)
+        {
+        	Log.v("send thread mSendThread == null","send thread mSendThread == null");
+        	return;
+        }
         
-        mSendThread.sendHandler.obtainMessage(SEND_DATA_VIA_TCP, size, -1,out).sendToTarget();
+        if(mSendThread.sendHandler == null)
+        {
+        	Log.v("send thread mSendThread.sendHandler == null ","send thread mSendThread.sendHandler == null");
+        	return;
+        }
+        if(s == null)Log.v("send thread out == null","send thread out == null");
+        
+        s= s.concat("\r\n");
+        byte[] send = null;
+		try {
+			send = s.getBytes("UTF-8");
+			
+	        mSendThread.sendHandler.obtainMessage(SEND_DATA_VIA_TCP, send.length, -1,send).sendToTarget();
+		} catch (UnsupportedEncodingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}			
+		Log.v("send data string is "+s,"send data");
+		Log.v("send data hex is "+MainActivity.printHexOutput(send,send.length),"send data");
+		
     }
 
     /**
@@ -258,6 +283,15 @@ public class TcpChatService {
             mSendThread = new TcpSendThread(socket); 
             mSendThread.start();
             setState(STATE_CONNECTED); 
+            
+            try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+            LoginIn();
+            
             initKeepLiveTimer(KEEP_LIVE_INTERVAL);
         }
 
@@ -274,6 +308,26 @@ public class TcpChatService {
         }
     }
 
+    
+    boolean LoginIn()
+    {
+    	JSONObject data = new JSONObject(); 
+        try {
+			data.put("command", "login_in");
+			data.put("id", "1");
+			data.put("password", "123456789");
+			
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+        
+        String jsonStr = data.toString();
+       // Log.v("login in "+jsonStr,"login in");
+		write(jsonStr);
+			
+    	return false;
+    }
     /**
      * This thread runs during a connection with a remote device.
      * It handles all incoming and outgoing transmissions.
@@ -282,8 +336,10 @@ public class TcpChatService {
     	Socket clntSock;
     	int bytesRcvd ;
     	byte[] buffer;
+    	byte[] recvBuf;
     	int length;
     	int totalBytesRcvd;
+    	int bufferIndex = 0;
     	InputStream in;
 
         public TcpRecvThread(Socket sk) {
@@ -291,6 +347,7 @@ public class TcpChatService {
             clntSock = sk;
             totalBytesRcvd = 0;
             buffer = new byte[MAX_DADA_PAYLOAD];
+            recvBuf = new byte[MAX_DADA_PAYLOAD];
             // Get the BluetoothSocket input and output streams
             try {
             	in = clntSock.getInputStream(); 
@@ -309,29 +366,46 @@ public class TcpChatService {
     		{
             	
 	    		try {	    			    	    	
-	    	    	if ((bytesRcvd = in.read(buffer, 0, 4)) == -1) 
+	    	    	if ((bytesRcvd = in.read(recvBuf)) == -1) 
 	    			{
 	    	    		messageForToast("Connection closed prematurely");
 	    				throw new SocketException("Connection closed prematurely"); 
 	    				
 	    			}
-	    	    	Log.v("receive length byte is "+MainActivity.printHexOutput(buffer,4),"recv data");
-	    	    	length = (int) MainActivity.bigEndianArrayToInt(buffer,0,4);
+	    	    	Log.v("receive data","recv data");
+	    	    	System.arraycopy(recvBuf, 0, buffer, bufferIndex, bytesRcvd);
+	    	    	bufferIndex = bufferIndex+bytesRcvd;
 	    	    	
-		    		while (totalBytesRcvd < length)
-		    		{ 
-		    			if ((bytesRcvd = in.read(buffer, totalBytesRcvd, length - totalBytesRcvd)) == -1) 
-		    			{
-		    				messageForToast("Connection closed prematurely");
-		    				throw new SocketException("Connection closed prematurely"); 
-		    			}
-		    			totalBytesRcvd += bytesRcvd; 
-		    		   
-		    		} // data array is full 
-		    		Log.v("receive data  is "+MainActivity.printHexOutput(buffer,totalBytesRcvd),"recv data");
+	    	    	//length = (int) MainActivity.bigEndianArrayToInt(buffer,0,4);
+	    	    	String s = new String(buffer,0,bufferIndex,"UTF-8");
+	    	    	int index = s.indexOf("\r\n");
+	    	    	if (index == -1)
+	    	    	{
+	    	    		continue;
+	    	    	}
+	    	    	else
+	    	    	{
+	    	    		Log.v("receive hex is "+MainActivity.printHexOutput(buffer,bufferIndex),"recv data");
+	    	    		Log.v("receive string is "+s,"recv data");
+	    	    		s = s.substring(0, index);
+	    	    		int remainIndex = (s+"\r\n").getBytes("UTF-8").length;
+	    	    		System.arraycopy(buffer, remainIndex, buffer, 0, bufferIndex - remainIndex);
+	    	    		mHandler.obtainMessage(MainActivity.MESSAGE_READ,s).sendToTarget();
+	    	    	}
+//		    		while (totalBytesRcvd < length)
+//		    		{ 
+//		    			if ((bytesRcvd = in.read(buffer, totalBytesRcvd, length - totalBytesRcvd)) == -1) 
+//		    			{
+//		    				messageForToast("Connection closed prematurely");
+//		    				throw new SocketException("Connection closed prematurely"); 
+//		    			}
+//		    			totalBytesRcvd += bytesRcvd; 
+//		    		   
+//		    		} // data array is full 
+//		    		Log.v("receive data  is "+MainActivity.printHexOutput(buffer,totalBytesRcvd),"recv data");
 		    		
-		    		 mHandler.obtainMessage(MainActivity.MESSAGE_READ, totalBytesRcvd, -1, buffer).sendToTarget();
-		    		 totalBytesRcvd = 0;
+		    		
+		    		// totalBytesRcvd = 0;
   	    	 	    	
 	    		} catch (IOException e) {
 					// TODO Auto-generated catch block
@@ -409,8 +483,10 @@ public class TcpChatService {
 		          		try {
 		          			  buffer = (byte[])msg.obj;
 		          			  size = msg.arg1;
-		          			  out.write(buffer,0, size);		
-							
+		          			  Log.v("send data","send data");
+		          			  out.write(buffer,0, size);	
+		          			  
+		          			  //Log.v("send byte is "+MainActivity.printHexOutput(buffer,size),"send data");
 		          			  mHandler.obtainMessage(MainActivity.MESSAGE_WRITE, size, -1, buffer).sendToTarget();
 						} catch (IOException e) {
 							// TODO Auto-generated catch block
@@ -494,7 +570,7 @@ public class TcpChatService {
     class KeepliveTimerTask extends TimerTask {
     	private byte[] keepLivePacket = new byte[]{0,0,0,1,0x55};
         public void run() {
-        	write(keepLivePacket,keepLivePacket.length);
+        	//write(keepLivePacket,keepLivePacket.length);
         }
     }
 }
