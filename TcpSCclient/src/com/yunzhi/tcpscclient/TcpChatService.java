@@ -369,15 +369,17 @@ public class TcpChatService {
 	    	    	if ((bytesRcvd = in.read(recvBuf)) == -1) 
 	    			{
 	    	    		messageForToast("Connection closed prematurely");
-	    				throw new SocketException("Connection closed prematurely"); 
+	    	    		cancel();
+	    				//throw new SocketException("Connection closed prematurely"); 
 	    				
 	    			}
-	    	    	Log.v("receive data","recv data");
+	    	    	//Log.v("receive data","recv data");
 	    	    	System.arraycopy(recvBuf, 0, buffer, bufferIndex, bytesRcvd);
 	    	    	bufferIndex = bufferIndex+bytesRcvd;
 	    	    	
 	    	    	//length = (int) MainActivity.bigEndianArrayToInt(buffer,0,4);
 	    	    	String s = new String(buffer,0,bufferIndex,"UTF-8");
+	    	    	Log.v("receive part string is "+s,"recv data");
 	    	    	int index = s.indexOf("\r\n");
 	    	    	if (index == -1)
 	    	    	{
@@ -385,11 +387,12 @@ public class TcpChatService {
 	    	    	}
 	    	    	else
 	    	    	{
-	    	    		Log.v("receive hex is "+MainActivity.printHexOutput(buffer,bufferIndex),"recv data");
-	    	    		Log.v("receive string is "+s,"recv data");
+	    	    		//Log.v("receive hex is "+MainActivity.printHexOutput(buffer,bufferIndex),"recv data");
+	    	    		Log.v("receive full string is "+s,"recv data");
 	    	    		s = s.substring(0, index);
 	    	    		int remainIndex = (s+"\r\n").getBytes("UTF-8").length;
 	    	    		System.arraycopy(buffer, remainIndex, buffer, 0, bufferIndex - remainIndex);
+	    	    		bufferIndex = bufferIndex - remainIndex;
 	    	    		mHandler.obtainMessage(MainActivity.MESSAGE_READ,s).sendToTarget();
 	    	    	}
 //		    		while (totalBytesRcvd < length)
@@ -562,10 +565,16 @@ public class TcpChatService {
         
     public void stopKeepLiveTimer()
     {
-    	mTimer.cancel();
-    	mTimer = null;
-    	mTimerTask.cancel();
-    	mTimerTask = null;
+    	if(mTimer!=null)
+    	{
+    		mTimer.cancel();
+    		mTimer = null;
+    	}
+    	if(mTimerTask!=null)
+    	{
+    		mTimerTask.cancel();
+    		mTimerTask = null;
+    	}
     }
     class KeepliveTimerTask extends TimerTask {
     	private byte[] keepLivePacket = new byte[]{0,0,0,1,0x55};
