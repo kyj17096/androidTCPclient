@@ -76,7 +76,9 @@ public class TcpChatService {
     public static final int STATE_CONNECTING = 2; // now initiating an outgoing connection
     public static final int STATE_CONNECTED = 3;  // now connected to a remote device
     private final int KEEP_LIVE_INTERVAL = 1000*60*15;
-
+    private String keepLiveTick = "";
+    private String myId = ""+2;
+	
     /**
      * Constructor. Prepares a new BluetoothChat session.
      * @param context  The UI Activity Context
@@ -86,6 +88,15 @@ public class TcpChatService {
     	ctx = context;
         mState = STATE_NONE;
         mHandler = handler;
+        try {
+        	JSONObject keepLive = new JSONObject();
+        	keepLive.put("id",myId);
+			keepLive.put("command","keep_live");
+			keepLiveTick = keepLive.toString();
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
     }
 
     /**
@@ -314,7 +325,7 @@ public class TcpChatService {
     	JSONObject data = new JSONObject(); 
         try {
 			data.put("command", "login_in");
-			data.put("id", "1");
+			data.put("id", myId);
 			data.put("password", "123456789");
 			
 		} catch (JSONException e) {
@@ -490,7 +501,7 @@ public class TcpChatService {
 		          			  out.write(buffer,0, size);	
 		          			  
 		          			  //Log.v("send byte is "+MainActivity.printHexOutput(buffer,size),"send data");
-		          			  mHandler.obtainMessage(MainActivity.MESSAGE_WRITE, size, -1, buffer).sendToTarget();
+		          			  mHandler.obtainMessage(MainActivity.MESSAGE_WRITE, new String(buffer,0,size,"UTF-8")).sendToTarget();
 						} catch (IOException e) {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
@@ -576,10 +587,11 @@ public class TcpChatService {
     		mTimerTask = null;
     	}
     }
+	
     class KeepliveTimerTask extends TimerTask {
-    	private byte[] keepLivePacket = new byte[]{0,0,0,1,0x55};
+
         public void run() {
-        	//write(keepLivePacket,keepLivePacket.length);
+        	write(keepLiveTick);
         }
     }
 }

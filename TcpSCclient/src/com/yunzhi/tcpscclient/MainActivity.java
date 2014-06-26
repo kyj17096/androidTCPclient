@@ -375,7 +375,8 @@ public class MainActivity extends FragmentActivity {
         @Override
         public void handleMessage(Message msg) {
             String s = "";
-           
+            JSONObject result = null;
+            String jsonInfo = "";
             switch (msg.what) {
             case MESSAGE_STATE_CHANGE:
                 if(D) Log.i(TAG, "MESSAGE_STATE_CHANGE: " + msg.arg1);
@@ -395,26 +396,49 @@ public class MainActivity extends FragmentActivity {
                 }
                 break;
             case MESSAGE_WRITE:
-                byte[] writeBuf = (byte[]) msg.obj;
-                // construct a string from the buffer
-                if(sendForamtSelect == HEX_FORMAT)
-                {
-                	
-                	for(int i = 0;i< msg.arg1;i++)
-                		s = s+" "+Integer.toHexString(writeBuf[i]);
-             	
-                }
-                else
-                {
-					try {
-						s = new String(writeBuf,0,msg.arg1,"UTF-8");					
-					} catch (UnsupportedEncodingException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
+//                byte[] writeBuf = (byte[]) msg.obj;
+//                // construct a string from the buffer
+//                if(sendForamtSelect == HEX_FORMAT)
+//                {
+//                	
+//                	for(int i = 0;i< msg.arg1;i++)
+//                		s = s+" "+Integer.toHexString(writeBuf[i]);
+//             	
+//                }
+//                else
+//                {
+//					try {
+//						s = new String(writeBuf,0,msg.arg1,"UTF-8");					
+//					} catch (UnsupportedEncodingException e) {
+//						// TODO Auto-generated catch block
+//						e.printStackTrace();
+//					}
+//                	
+//                }
+
+                try {
+					
+                	result = new JSONObject((String)msg.obj);
+					String data = (String) result.get("command");
+					if(data.equals("connect_status"))
+					{
+						jsonInfo = "connecting to server";
 					}
-                	
-                }
-                mConversationArrayAdapter.add("Me:  " + s);
+					else if(data.equals("login_in"))
+					{
+						jsonInfo = "logining";
+					}
+					else if(data.equals("data_to_peer"))
+					{
+						jsonInfo = (String) result.get("command_to_device");
+						
+					} 
+					if(!jsonInfo.equals(""))
+						mConversationArrayAdapter.add("Me:  " + jsonInfo);
+				} catch (JSONException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
                 break;
             case MESSAGE_READ:
 //                byte[] readBuf = (byte[]) msg.obj;
@@ -441,27 +465,26 @@ public class MainActivity extends FragmentActivity {
 //					}
 //                	
 //                }
-            	String dis = "";
+ 
 				try {
-					JSONObject result = new JSONObject((String)msg.obj);
-			
+					result = new JSONObject((String)msg.obj);			
 					String data = (String) result.get("command");
 					if(data.equals("connect_status"))
 					{
-						String status = (String) result.get("connect_status");
-						dis = status;
+						jsonInfo = (String) result.get("connect_status");
+						
 					}
 					else if(data.equals("login_status"))
 					{
-						String status = (String) result.get("login_status");
-						dis = status;
+						jsonInfo = (String) result.get("login_status");
+						
 					}
 					else if(data.equals("data_to_peer"))
 					{
-						String status = (String) result.get("command_to_device");
-						dis = status;
+						jsonInfo = (String) result.get("command_to_device");
+				
 					} 
-					mConversationArrayAdapter.add(mConnectedRemoteName+":  " + dis ); 
+					mConversationArrayAdapter.add(mConnectedRemoteName+":  " + jsonInfo ); 
 				} catch (JSONException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();

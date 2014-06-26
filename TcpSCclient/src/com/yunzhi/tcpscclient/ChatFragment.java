@@ -63,9 +63,9 @@ public class ChatFragment extends Fragment {
                 String message = mOutEditText.getText().toString();
                 JSONObject data = new JSONObject(); 
                 try {
-					data.put("command", "data_to_peer");
+					data.put("command","data_to_peer");
 					data.put("command_to_device", message);
-					data.put("targetid", "2");
+					data.put("targetid", "1");
 				} catch (JSONException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
